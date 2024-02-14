@@ -100,6 +100,7 @@ impl TryFrom<i32> for PacketType {
 use tokio::net::TcpStream;
 use tokio::io::AsyncWriteExt;
 use tokio_util::io::SyncIoBridge;
+use tokio::task;
 use std::io;
 
 #[tokio::main]
@@ -112,10 +113,13 @@ async fn main() -> io::Result<()> {
     let packet = Packet::new(123, PacketType::Auth, password.into());
     let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
     stream.write_all(&packet).await?;
-    let bridge = SyncIoBridge::new(stream);
-    let mut reader = BufReader::with_capacity(4096, bridge);
-    let (data, _): (Packet, usize) = bincode::decode_from_reader(&mut reader, config::legacy()).unwrap();
-    println!("{:?}", data);
+    // read
+    task::spawn_blocking(move || {
+        let bridge = SyncIoBridge::new(stream);
+        let mut reader = BufReader::with_capacity(4096, bridge);
+        let (data, _): (Packet, usize) = bincode::decode_from_reader(&mut reader, config::legacy()).unwrap();
+        println!("{:?}", data);
+    }).await?;
     Ok(())
 }
 
