@@ -1,5 +1,5 @@
 
-use std::{any, ffi::CString, io::BufReader, str::FromStr};
+use std::{any, env, ffi::CString, io::BufReader, str::FromStr};
 use bincode::{config, de::{read::Reader, Decoder}, enc::{write::Writer, Encoder}, error::{DecodeError, EncodeError}, Decode, Encode};
 
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
@@ -104,8 +104,12 @@ use std::io;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let mut stream = TcpStream::connect("0.0.0.0:25575").await?;
-    let packet = Packet::new(123, PacketType::Auth, "password".into());
+    let endpoint = env::var("RCON_ENDPOINT")
+        .expect("RCON_ENDPOINT is required");
+    let mut stream = TcpStream::connect(endpoint).await?;
+    let password = env::var("RCON_PASSWORD")
+        .expect("RCON_PASSWORD is required");
+    let packet = Packet::new(123, PacketType::Auth, password.into());
     let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
     stream.write_all(&packet).await?;
     let bridge = SyncIoBridge::new(stream);
