@@ -124,19 +124,26 @@ async fn main() -> io::Result<()> {
     println!("write_all!");
     stream.readable().await?;
     let stream = Arc::new(Mutex::new(stream));
+    let data: Result<Packet, _> = decode_blocking(stream.clone()).await;
     // read
-    let data = task::spawn_blocking(move || {
-        let mut stream_guard = stream.lock().unwrap();
-        let stream = &mut *stream_guard;
-        println!("reading...");
-        let mut bridge = SyncIoBridge::new(stream);
-        let reader = IoExactReader::new(&mut bridge);
-        let mut decoder = DecoderImpl::new(reader, config::legacy());
-        Packet::decode(&mut decoder)
-    }).await?;
     println!("reading done packet! {:?}", data);
     sleep(Duration::from_secs(1)).await;
     Ok(())
+}
+
+async fn decode_blocking<T>(stream: Arc<Mutex<TcpStream>>) -> Result<T, anyhow::Error>
+    where T: Decode + Send + 'static
+{
+    let handle = task::spawn_blocking(move || {
+        let mut stream_guard = stream.lock().unwrap();
+        let stream = &mut *stream_guard;
+        let mut bridge = SyncIoBridge::new(stream);
+        let reader = IoExactReader::new(&mut bridge);
+        let mut decoder = DecoderImpl::new(reader, config::legacy());
+        T::decode(&mut decoder).unwrap()
+    });
+    let value = handle.await?;
+    Ok(value)
 }
 
 struct IoExactReader<T> {
