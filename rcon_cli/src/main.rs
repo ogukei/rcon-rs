@@ -115,12 +115,14 @@ async fn main() -> io::Result<()> {
     let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
     stream.write_all(&packet).await?;
     println!("write_all!");
+    stream.readable().await?;
     // read
     task::spawn_blocking(move || {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
         let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
         println!("{:?}", data);
+        println!("reading done");
     }).await?;
     Ok(())
 }
