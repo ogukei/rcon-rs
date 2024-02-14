@@ -108,16 +108,18 @@ async fn main() -> io::Result<()> {
     let endpoint = env::var("RCON_ENDPOINT")
         .expect("RCON_ENDPOINT is required");
     let mut stream = TcpStream::connect(endpoint).await?;
+    println!("connected!");
     let password = env::var("RCON_PASSWORD")
         .expect("RCON_PASSWORD is required");
     let packet = Packet::new(123, PacketType::Auth, password.into());
     let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
     stream.write_all(&packet).await?;
+    println!("write_all!");
     // read
     task::spawn_blocking(move || {
-        let bridge = SyncIoBridge::new(stream);
-        let mut reader = BufReader::with_capacity(4096, bridge);
-        let (data, _): (Packet, usize) = bincode::decode_from_reader(&mut reader, config::legacy()).unwrap();
+        println!("reading...");
+        let mut bridge = SyncIoBridge::new(stream);
+        let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
         println!("{:?}", data);
     }).await?;
     Ok(())
