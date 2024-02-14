@@ -64,11 +64,11 @@ impl Decode for Packet {
             .to_owned();
         println!("body: {}", body);
         // empty string
-        let null = u8::decode(decoder)?;
-        if null != 0 {
-            return Err(DecodeError::Other("broken packet: expected empty string"))
-        }
-        println!("null: {}", null);
+        // let null = u8::decode(decoder)?;
+        // if null != 0 {
+        //     return Err(DecodeError::Other("broken packet: expected empty string"))
+        // }
+        // println!("null: {}", null);
         let packet = Packet {
             id,
             r#type: r#type,
