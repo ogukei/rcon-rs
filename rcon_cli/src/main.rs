@@ -134,7 +134,7 @@ async fn main() -> io::Result<()> {
     // write
     {
         let command = env::var("RCON_COMMAND")
-            .expect("RCON_COMMAND is required");
+            .unwrap_or("broadcast こんにちは".into());
         let packet = Packet::new(345, PacketType::ExecCommandOrAuthResponse, command);
         let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
         let mut guard = stream.lock().unwrap();
