@@ -30,7 +30,7 @@ impl Encode for Packet {
         self.id.encode(encoder)?;
         let r#type = self.r#type as i32;
         r#type.encode(encoder)?;
-        body.as_bytes_with_nul().encode(encoder)?;
+        encoder.writer().write(body.as_bytes_with_nul())?;
         0u8.encode(encoder)?;
         Ok(())
     }
@@ -135,12 +135,19 @@ mod tests {
     use super::Packet;
 
     #[test]
-    fn it_works() {
+    fn test_decode() {
         let data: Vec<u8> = vec![0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x70, 0x61, 0x73, 0x73, 0x77, 0x72, 0x64, 0x00, 0x00];
         let (data, _): (Packet, usize) = bincode::decode_from_slice(&data, config::legacy()).unwrap();
         println!("{:?}", data);
         assert_eq!(data.id, 0);
         assert_eq!(data.r#type, PacketType::Auth);
         assert_eq!(data.body, "passwrd");
+    }
+
+    #[test]
+    fn test_encode() {
+        let packet = Packet::new(0, PacketType::Auth, "passwrd".into());
+        let data = bincode::encode_to_vec(packet, config::legacy()).unwrap();
+        assert_eq!(data, vec![0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x70, 0x61, 0x73, 0x73, 0x77, 0x72, 0x64, 0x00, 0x00]);
     }
 }
