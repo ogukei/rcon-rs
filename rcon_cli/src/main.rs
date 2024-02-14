@@ -28,7 +28,7 @@ impl Encode for Packet {
         let size = size as i32;
         size.encode(encoder)?;
         self.id.encode(encoder)?;
-        let r#type = self.r#type as i32;
+        let r#type: i32 = self.r#type as i32;
         r#type.encode(encoder)?;
         encoder.writer().write(body.as_bytes_with_nul())?;
         0u8.encode(encoder)?;
@@ -39,8 +39,11 @@ impl Encode for Packet {
 impl Decode for Packet {
     fn decode<D: Decoder>(decoder: &mut D) -> Result<Self, DecodeError> {
         let size = i32::decode(decoder)?;
+        println!("size: {}", size);
         let id = i32::decode(decoder)?;
+        println!("id: {}", id);
         let r#type = i32::decode(decoder)?;
+        println!("type: {}", r#type);
         let r#type: PacketType = r#type.try_into()?;
         // without id, type and an empty string
         let body_size = size - (8 + 1);
@@ -117,12 +120,13 @@ async fn main() -> io::Result<()> {
     println!("write_all!");
     stream.readable().await?;
     // read
-    task::spawn_blocking(move || {
+    let stream = task::spawn_blocking(move || {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
         let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
         println!("{:?}", data);
         println!("reading done");
+        bridge.into_inner()
     }).await?;
     Ok(())
 }
