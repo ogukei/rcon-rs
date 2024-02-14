@@ -62,11 +62,13 @@ impl Decode for Packet {
         let body = body.to_str()
             .map_err(|_| DecodeError::Other("invalid body string"))?
             .to_owned();
+        println!("body: {}", body);
         // empty string
         let null = u8::decode(decoder)?;
         if null != 0 {
             return Err(DecodeError::Other("broken packet: expected empty string"))
         }
+        println!("null: {}", null);
         let packet = Packet {
             id,
             r#type: r#type,
