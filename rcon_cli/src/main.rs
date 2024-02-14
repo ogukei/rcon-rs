@@ -74,6 +74,7 @@ impl Decode for Packet {
             r#type: r#type,
             body,
         };
+        println!("ok packet");
         Ok(packet)
     }
 }
@@ -126,8 +127,8 @@ async fn main() -> io::Result<()> {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
         let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
-        println!("{:?}", data);
         println!("reading done");
+        println!("{:?}", data);
         bridge.into_inner()
     }).await?;
     Ok(())
