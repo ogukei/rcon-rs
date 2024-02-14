@@ -1,6 +1,6 @@
 
 use std::{any, env, ffi::CString, io::{BufReader, Read}, str::FromStr};
-use bincode::{config, de::{read::Reader, Decoder}, enc::{write::Writer, Encoder}, error::{DecodeError, EncodeError}, Decode, Encode};
+use bincode::{config, de::{read::Reader, Decoder, DecoderImpl}, enc::{write::Writer, Encoder}, error::{DecodeError, EncodeError}, Decode, Encode};
 
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 #[derive(Debug)]
@@ -127,14 +127,36 @@ async fn main() -> io::Result<()> {
     let _ = task::spawn_blocking(move || {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
-        let mut buf: [u8; 14] = [0u8; 14];
-        bridge.read_exact(&mut buf).unwrap();
-        // let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
+        let reader = IoExactReader::new(bridge);
+        let mut decoder = DecoderImpl::new(reader, config::legacy());
+        Packet::decode(&mut decoder);
         // (bridge.into_inner(), data)
     }).await?;
-    println!("reading done");
+    println!("reading done packet!");
     sleep(Duration::from_secs(1)).await;
     Ok(())
+}
+
+struct IoExactReader<T> {
+    inner: T,
+}
+
+impl<T> IoExactReader<T> {
+    fn new(inner: T) -> Self {
+        Self {
+            inner,
+        }
+    }
+}
+
+impl<T: std::io::Read> Reader for IoExactReader<T> {
+    fn read(&mut self, bytes: &mut [u8]) -> Result<(), DecodeError> {
+        self.inner.read_exact(bytes)
+            .map_err(|inner| DecodeError::Io {
+                inner,
+                additional: bytes.len(),
+            })
+    }
 }
 
 #[cfg(test)]
