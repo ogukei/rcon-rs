@@ -1,5 +1,5 @@
 
-use std::{any, env, ffi::CString, io::BufReader, str::FromStr};
+use std::{any, env, ffi::CString, io::{BufReader, Read}, str::FromStr};
 use bincode::{config, de::{read::Reader, Decoder}, enc::{write::Writer, Encoder}, error::{DecodeError, EncodeError}, Decode, Encode};
 
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
@@ -124,11 +124,13 @@ async fn main() -> io::Result<()> {
     println!("write_all!");
     stream.readable().await?;
     // read
-    let (stream, data) = task::spawn_blocking(move || {
+    let _ = task::spawn_blocking(move || {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
-        let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
-        (bridge.into_inner(), data)
+        let mut buf: [u8; 14] = [0u8; 14];
+        bridge.read_exact(&mut buf).unwrap();
+        // let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
+        // (bridge.into_inner(), data)
     }).await?;
     println!("reading done");
     sleep(Duration::from_secs(1)).await;
