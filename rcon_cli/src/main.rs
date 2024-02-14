@@ -64,11 +64,11 @@ impl Decode for Packet {
             .to_owned();
         println!("body: {}", body);
         // empty string
-        // let null = u8::decode(decoder)?;
-        // if null != 0 {
-        //     return Err(DecodeError::Other("broken packet: expected empty string"))
-        // }
-        // println!("null: {}", null);
+        let null = u8::decode(decoder)?;
+        if null != 0 {
+            return Err(DecodeError::Other("broken packet: expected empty string"))
+        }
+        println!("null: {}", null);
         let packet = Packet {
             id,
             r#type: r#type,
@@ -108,6 +108,7 @@ use tokio::io::AsyncWriteExt;
 use tokio_util::io::SyncIoBridge;
 use tokio::task;
 use std::io;
+use tokio::time::{sleep, Duration};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -123,14 +124,14 @@ async fn main() -> io::Result<()> {
     println!("write_all!");
     stream.readable().await?;
     // read
-    let stream = task::spawn_blocking(move || {
+    let (stream, data) = task::spawn_blocking(move || {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
         let (data, _): (Packet, usize) = bincode::decode_from_std_read(&mut bridge, config::legacy()).unwrap();
-        println!("reading done");
-        println!("{:?}", data);
-        bridge.into_inner()
+        (bridge.into_inner(), data)
     }).await?;
+    println!("reading done");
+    sleep(Duration::from_secs(1)).await;
     Ok(())
 }
 
