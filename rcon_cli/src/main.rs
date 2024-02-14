@@ -1,36 +1,61 @@
 
-use std::{any, env, ffi::CString, io::{BufReader, Read}, str::FromStr, sync::{Arc, Mutex}};
+use std::{any, env, ffi::CString, io::{BufReader, Read}, ptr::slice_from_raw_parts, str::FromStr, sync::{Arc, Mutex}};
 use bincode::{config, de::{read::Reader, Decoder, DecoderImpl}, enc::{write::Writer, Encoder}, error::{DecodeError, EncodeError}, Decode, Encode};
+
+fn from_u16(from: &[u16]) -> &[u8] {
+    let len = from.len().checked_mul(2).unwrap();
+    let ptr: *const u8 = from.as_ptr().cast();
+    unsafe { std::slice::from_raw_parts(ptr, len) }
+}
 
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 #[derive(Debug)]
 struct Packet {
     id: i32,
     r#type: PacketType,
-    body: String,
+    body: CString,
 }
 
 impl Packet {
-    fn new(id: i32, r#type: PacketType, body: String) -> Packet  {
+    fn new_raw(id: i32, r#type: PacketType, body: CString) -> Packet  {
         Packet {
             id,
             r#type,
             body,
         }
     }
+
+    fn new(id: i32, r#type: PacketType, body: String) -> Result<Packet, anyhow::Error>  {
+        let value = Packet {
+            id,
+            r#type,
+            body: CString::new(body.as_str())?,
+        };
+        Ok(value)
+    }
+
+    fn new_utf16(id: i32, r#type: PacketType, body: String) -> Result<Packet, anyhow::Error>  {
+        let body: Vec<u16> = body.encode_utf16().chain(vec![0]).collect();
+        let body = from_u16(&body);
+        
+        let value = Packet {
+            id,
+            r#type,
+            body: CString::new(body)?,
+        };
+        Ok(value)
+    }
 }
 
 impl Encode for Packet {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
-        let body = CString::new(self.body.as_str())
-            .map_err(|_| EncodeError::Other("invalid body string"))?;
-        let size: usize = 8 + body.as_bytes_with_nul().len() + 1;
+        let size: usize = 8 + self.body.as_bytes_with_nul().len() + 1;
         let size = size as i32;
         size.encode(encoder)?;
         self.id.encode(encoder)?;
         let r#type: i32 = self.r#type as i32;
         r#type.encode(encoder)?;
-        encoder.writer().write(body.as_bytes_with_nul())?;
+        encoder.writer().write(self.body.as_bytes_with_nul())?;
         0u8.encode(encoder)?;
         Ok(())
     }
@@ -59,10 +84,7 @@ impl Decode for Packet {
             .map_err(|_| DecodeError::CStringNulError {
                 position: 0,
             })?;
-        let body = body.to_str()
-            .map_err(|_| DecodeError::Other("invalid body string"))?
-            .to_owned();
-        println!("body: {}", body);
+        println!("body: {}", body.to_str().unwrap_or("-"));
         // empty string
         let null = u8::decode(decoder)?;
         if null != 0 {
@@ -111,7 +133,7 @@ use std::io;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> anyhow::Result<()> {
     let endpoint = env::var("RCON_ENDPOINT")
         .expect("RCON_ENDPOINT is required");
     let stream = TcpStream::connect(endpoint).await?;
@@ -119,7 +141,7 @@ async fn main() -> io::Result<()> {
     println!("connected!");
     let password = env::var("RCON_PASSWORD")
         .expect("RCON_PASSWORD is required");
-    let packet = Packet::new(123, PacketType::Auth, password.into());
+    let packet = Packet::new(123, PacketType::Auth, password.into())?;
     let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
     {
         let mut guard = stream.lock().unwrap();
@@ -135,7 +157,7 @@ async fn main() -> io::Result<()> {
     {
         let command = env::var("RCON_COMMAND")
             .unwrap_or("broadcast こんにちは".into());
-        let packet = Packet::new(345, PacketType::ExecCommandOrAuthResponse, command);
+        let packet = Packet::new_utf16(345, PacketType::ExecCommandOrAuthResponse, command)?;
         let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
         let mut guard = stream.lock().unwrap();
         let stream = &mut *guard;
@@ -201,12 +223,12 @@ mod tests {
         println!("{:?}", data);
         assert_eq!(data.id, 0);
         assert_eq!(data.r#type, PacketType::Auth);
-        assert_eq!(data.body, "passwrd");
+        assert_eq!(data.body.to_str().unwrap(), "passwrd");
     }
 
     #[test]
     fn test_encode() {
-        let packet = Packet::new(0, PacketType::Auth, "passwrd".into());
+        let packet = Packet::new(0, PacketType::Auth, "passwrd".into()).unwrap();
         let data = bincode::encode_to_vec(packet, config::legacy()).unwrap();
         assert_eq!(data, vec![0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x70, 0x61, 0x73, 0x73, 0x77, 0x72, 0x64, 0x00, 0x00]);
     }
