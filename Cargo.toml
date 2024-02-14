@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "rcon_cli",
+    "rcon_utf8",
+]
+resolver = "2"
