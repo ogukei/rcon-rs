@@ -124,15 +124,15 @@ async fn main() -> io::Result<()> {
     println!("write_all!");
     stream.readable().await?;
     // read
-    let _ = task::spawn_blocking(move || {
+    let data = task::spawn_blocking(move || {
         println!("reading...");
         let mut bridge = SyncIoBridge::new(stream);
-        let reader = IoExactReader::new(bridge);
+        let reader = IoExactReader::new(&mut bridge);
         let mut decoder = DecoderImpl::new(reader, config::legacy());
-        Packet::decode(&mut decoder);
+        Packet::decode(&mut decoder)
         // (bridge.into_inner(), data)
     }).await?;
-    println!("reading done packet!");
+    println!("reading done packet! {:?}", data);
     sleep(Duration::from_secs(1)).await;
     Ok(())
 }
@@ -146,6 +146,10 @@ impl<T> IoExactReader<T> {
         Self {
             inner,
         }
+    }
+
+    fn into_inner(self) -> T {
+        self.inner
     }
 }
 
