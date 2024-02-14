@@ -157,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
     {
         let command = env::var("RCON_COMMAND")
             .unwrap_or("broadcast こんにちは".into());
-        let packet = Packet::new_utf16(345, PacketType::ExecCommandOrAuthResponse, command)?;
+        let packet = Packet::new(345, PacketType::ExecCommandOrAuthResponse, command)?;
         let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
         let mut guard = stream.lock().unwrap();
         let stream = &mut *guard;
