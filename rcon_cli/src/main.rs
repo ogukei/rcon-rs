@@ -114,20 +114,34 @@ use tokio::time::{sleep, Duration};
 async fn main() -> io::Result<()> {
     let endpoint = env::var("RCON_ENDPOINT")
         .expect("RCON_ENDPOINT is required");
-    let mut stream = TcpStream::connect(endpoint).await?;
+    let stream = TcpStream::connect(endpoint).await?;
+    let stream = Arc::new(Mutex::new(stream));
     println!("connected!");
     let password = env::var("RCON_PASSWORD")
         .expect("RCON_PASSWORD is required");
     let packet = Packet::new(123, PacketType::Auth, password.into());
     let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
-    stream.write_all(&packet).await?;
-    println!("write_all!");
-    stream.readable().await?;
-    let stream = Arc::new(Mutex::new(stream));
-    let data: Result<Packet, _> = decode_blocking(&stream).await;
+    {
+        let mut guard = stream.lock().unwrap();
+        let stream = &mut *guard;
+        stream.write_all(&packet).await?;
+        stream.readable().await?;
+    }
     // read
+    let data: Result<Packet, _> = decode_blocking(&stream).await;
     println!("reading done packet! {:?}", data);
     sleep(Duration::from_secs(1)).await;
+    // write
+    {
+        let packet = Packet::new(345, PacketType::ExecCommandOrAuthResponse, "broadcast Hello".into());
+        let packet = bincode::encode_to_vec(packet, config::legacy()).unwrap();
+        let mut guard = stream.lock().unwrap();
+        let stream = &mut *guard;
+        stream.write_all(&packet).await?;
+        stream.readable().await?;
+        println!("writing packet done!");
+        sleep(Duration::from_secs(1)).await;
+    }
     Ok(())
 }
 
