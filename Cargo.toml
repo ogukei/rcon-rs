@@ -2,6 +2,6 @@
 
 members = [
     "rcon_cli",
-    "rcon_utf8",
+    "rcon",
 ]
 resolver = "2"

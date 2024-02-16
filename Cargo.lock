@@ -178,23 +178,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "rcon_cli"
+name = "rcon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
- "rcon_utf8",
  "tokio",
  "tokio-util",
 ]
 
 [[package]]
-name = "rcon_utf8"
+name = "rcon_cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
+ "rcon",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

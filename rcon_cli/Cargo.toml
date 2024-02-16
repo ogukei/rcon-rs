@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.79"
 bincode = "2.0.0-rc.3"
-rcon_utf8 = { path = "../rcon_utf8" }
+rcon = { path = "../rcon" }
 tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "net", "io-util", "time"] }
 tokio-util = { version = "0.7.10", features = ["io", "io-util"] }
