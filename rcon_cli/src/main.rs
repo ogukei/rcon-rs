@@ -8,14 +8,14 @@ use log::trace;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init();
     // connect
-    trace!("connecting");
     let endpoint = env::var("RCON_ENDPOINT").expect("RCON_ENDPOINT is required");
+    trace!("connecting");
     let client = RconClient::connect(&endpoint).await?;
     trace!("connected");
     // auth
     const AUTH_PACKET_ID: i32 = 0;
-    
     let password = env::var("RCON_PASSWORD").expect("RCON_PASSWORD is required");
     let auth_request = Packet::new(AUTH_PACKET_ID, PacketType::AUTH, password.into())?;
     trace!("sending auth request");
