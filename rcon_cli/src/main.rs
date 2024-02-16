@@ -2,7 +2,7 @@
 
 use std::env;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use rcon::{client::RconClient, Packet, PacketType};
 
 #[tokio::main]
@@ -28,8 +28,7 @@ async fn main() -> Result<()> {
     if auth_response.id() == AUTH_PACKET_ID {
         println!("authentication successful");
     } else {
-        println!("authentication failure");
-        return Ok(())
+        bail!("authentication failure");
     }
     // command
     const COMMAND_PACKET_ID: i32 = 1;
