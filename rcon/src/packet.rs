@@ -69,7 +69,7 @@ impl Decode for Packet {
         let r#type: PacketType = r#type.try_into()?;
         // without id, type and an empty string
         let body_size = size - (8 + 1);
-        if body_size <= 0 {
+        if body_size <= 0 || body_size >= 4096 {
             bail!("broken packet: invalid size")
         }
         let body_size = body_size as usize;
