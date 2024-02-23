@@ -28,6 +28,10 @@ impl<T> IoWriter<T> {
     pub fn new(inner: T) -> Self {
         Self { inner }
     }
+
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
 }
 
 impl<T: AsyncWrite + Unpin> Encoder for IoWriter<T> {

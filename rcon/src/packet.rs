@@ -2,6 +2,7 @@
 use std::ffi::CString;
 use anyhow::{bail, Result};
 use crate::serialize::{Encode, Decode, Encoder, Decoder};
+use log::trace;
 
 // https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 #[derive(Debug)]
@@ -63,6 +64,7 @@ impl Encode for Packet {
 
 impl Decode for Packet {
     async fn decode(decoder: &mut impl Decoder) -> Result<Self> {
+        trace!("decoding packet");
         let size = i32::decode(decoder).await?;
         let id = i32::decode(decoder).await?;
         let r#type = i32::decode(decoder).await?;
@@ -72,6 +74,7 @@ impl Decode for Packet {
         if body_size <= 0 || body_size >= 4096 {
             bail!("broken packet: invalid size")
         }
+        trace!("reading body {} bytes", body_size);
         let body_size = body_size as usize;
         // body string
         let mut body: Vec<u8> = vec![0u8; body_size];
