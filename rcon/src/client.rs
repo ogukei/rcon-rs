@@ -5,8 +5,8 @@ use anyhow::Result;
 use crate::{packet::Packet, serialize::{Decode, Encode, IoReader, IoWriter}};
 
 pub struct RconClient {
-    read_stream: Mutex<OwnedReadHalf>,
-    write_stream: Mutex<OwnedWriteHalf>,
+    pub(crate) read_stream: Mutex<OwnedReadHalf>,
+    pub(crate) write_stream: Mutex<OwnedWriteHalf>,
 }
 
 impl RconClient {
